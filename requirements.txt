@@ -4,3 +4,4 @@ numpy
 matplotlib
 lxml
 Pillow
+streamlit
