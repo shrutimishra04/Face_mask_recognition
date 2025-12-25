@@ -1,15 +1,39 @@
 import os
 import io
+import sys
 from PIL import Image
 import numpy as np
 import streamlit as st
+import importlib.util
+
+# ensure repo root is on sys.path so `import src` works when running via Streamlit
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
 
 try:
     import tensorflow as tf
 except Exception:
     tf = None
 
-from src.utils.visualize_clean import decode_predictions, draw_boxes_on_image, CLASS_NAMES
+# load visualization helper directly from file to avoid package import issues
+viz_path = os.path.join(ROOT, 'src', 'utils', 'visualize_clean.py')
+if os.path.exists(viz_path):
+    spec = importlib.util.spec_from_file_location('visualize_clean', viz_path)
+    viz = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(viz)
+    decode_predictions = viz.decode_predictions
+    draw_boxes_on_image = viz.draw_boxes_on_image
+    CLASS_NAMES = getattr(viz, 'CLASS_NAMES', ['with_mask', 'without_mask', 'mask_weared_incorrect'])
+else:
+    # fallback stubs
+    def decode_predictions(*args, **kwargs):
+        return []
+
+    def draw_boxes_on_image(image, boxes):
+        return (image * 255).astype('uint8')
+
+    CLASS_NAMES = ['with_mask', 'without_mask', 'mask_weared_incorrect']
 
 
 MODEL_DIR = os.path.join(os.getcwd(), 'outputs', 'saved_model')
