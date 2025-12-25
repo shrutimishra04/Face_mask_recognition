@@ -68,11 +68,35 @@ def run_inference(model, img_arr):
     inp = np.expand_dims(img_arr, axis=0)
     if model is None:
         return None
+    # handle several model object types: Keras model, SavedModel module, or signature callable
     try:
-        out = model(inp)
-    except TypeError:
-        out = model(inp, training=False)
+        # Prefer using a SavedModel signature if available
+        if hasattr(model, 'signatures') and 'serving_default' in model.signatures:
+            sig = model.signatures['serving_default']
+            import tensorflow as _tf
+            t_inp = _tf.convert_to_tensor(inp, dtype=_tf.float32)
+            out = sig(t_inp)
+        elif hasattr(model, 'predict'):
+            out = model.predict(inp)
+        elif callable(model):
+            out = model(inp)
+        else:
+            # try to access signature via dict/get
+            try:
+                sig = model.signatures.get('serving_default')
+            except Exception:
+                sig = None
+            if sig is not None:
+                import tensorflow as _tf
+                t_inp = _tf.convert_to_tensor(inp, dtype=_tf.float32)
+                out = sig(t_inp)
+            else:
+                return None
+    except Exception:
+        return None
+
     if isinstance(out, dict):
+        # signature returns dict of tensors
         out = list(out.values())[0]
     out_np = out.numpy() if hasattr(out, 'numpy') else np.array(out)
     return out_np[0]
