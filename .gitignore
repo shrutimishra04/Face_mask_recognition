@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+outputs/
+*.h5
+*.tflite
+*.zip
+data/dataset/
+*.pyc
+/.idea/
+/.vscode/
+env/
+venv/
+*.log
